@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://doing-nothing-challenge.vercel.app/sitemap.xml
