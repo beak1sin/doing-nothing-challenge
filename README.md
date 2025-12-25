@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧘 멍때리기 대회 (The Art of Doing Nothing)
 
-## Getting Started
+**아무것도 하지 않기의 예술** - 얼마나 오래 멍을 때릴 수 있는지 도전해보세요!
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.0-38B2AC?style=flat-square&logo=tailwind-css)
+
+## 🎮 게임 규칙
+
+| 행동 | 결과 |
+|------|------|
+| 🖱️ 마우스 움직임 | 탈락! |
+| ⌨️ 키보드 입력 | 탈락! |
+| 🔄 탭 전환 | 탈락! |
+| ⚠️ 생존 신고 무응답 | 탈락! |
+
+## ✨ 주요 기능
+
+- **Anti-Cheat 시스템**: 마우스 움직임, 키보드 입력, 탭 전환 감지
+- **생존 신고**: 랜덤하게 나타나는 생존 확인 팝업 (스페이스바로 응답)
+- **최고 기록 저장**: LocalStorage를 활용한 개인 최고 기록 관리
+- **결과 공유**: 친구들에게 기록 공유하기
+
+## 🛠️ 기술 스택
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: TailwindCSS 4.0
+- **State Management**: React Hooks (Custom Hooks)
+
+## 🚀 시작하기
 
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000)에서 확인하세요.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 프로젝트 구조
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+doing-nothing-challenge/
+├── app/
+│   ├── page.tsx          # 메인 게임 페이지
+│   ├── layout.tsx        # 루트 레이아웃
+│   └── globals.css       # 전역 스타일
+├── hooks/
+│   ├── useGameLogic.ts   # 게임 로직 훅
+│   ├── useAntiCheat.ts   # 치팅 방지 훅
+│   └── useSurvivalCheck.ts # 생존 체크 훅
+└── README.md
+```
 
-## Learn More
+## 📝 License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License
