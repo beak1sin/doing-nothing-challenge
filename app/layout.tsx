@@ -36,6 +36,9 @@ export const metadata: Metadata = {
     description: "아무것도 하지 않고 얼마나 버틸 수 있나요?",
     images: ["/og-image.png"],
   },
+  verification: {
+    google: "yp5xM-8OZRGL5_vwH5RfQz3kH1zZ8brjDXteIKnDI48",
+  },
 };
 
 export default function RootLayout({
