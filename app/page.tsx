@@ -38,8 +38,13 @@ export default function Home() {
     loading: rankingLoading,
     error: rankingError,
     userRank,
+    filter,
+    userCountry,
+    setFilter,
     fetchRankings,
     submitScore,
+    subscribeToRankings,
+    unsubscribeFromRankings,
   } = useRankings();
 
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -304,7 +309,12 @@ export default function Home() {
         rankings={rankings}
         loading={rankingLoading}
         error={rankingError}
+        filter={filter}
+        userCountry={userCountry}
+        onFilterChange={setFilter}
         onRefresh={fetchRankings}
+        onSubscribe={subscribeToRankings}
+        onUnsubscribe={unsubscribeFromRankings}
       />
     </main>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { Ranking } from "@/lib/supabase";
+import { Ranking, getFlag, countryNames } from "@/lib/supabase";
+
+type RankingFilter = "world" | "country";
 
 interface RankingModalProps {
   isOpen: boolean;
@@ -9,7 +11,12 @@ interface RankingModalProps {
   rankings: Ranking[];
   loading: boolean;
   error: string | null;
+  filter: RankingFilter;
+  userCountry: string;
+  onFilterChange: (filter: RankingFilter) => void;
   onRefresh: () => void;
+  onSubscribe: () => void;
+  onUnsubscribe: () => void;
 }
 
 export default function RankingModal({
@@ -18,13 +25,21 @@ export default function RankingModal({
   rankings,
   loading,
   error,
+  filter,
+  userCountry,
+  onFilterChange,
   onRefresh,
+  onSubscribe,
+  onUnsubscribe,
 }: RankingModalProps) {
   useEffect(() => {
     if (isOpen) {
       onRefresh();
+      onSubscribe();
+    } else {
+      onUnsubscribe();
     }
-  }, [isOpen, onRefresh]);
+  }, [isOpen, onRefresh, onSubscribe, onUnsubscribe]);
 
   if (!isOpen) return null;
 
@@ -54,7 +69,34 @@ export default function RankingModal({
         <div className="text-center mb-4">
           <div className="text-4xl mb-2">🏆</div>
           <h3 className="text-xl font-bold text-white">월드랭킹 TOP 100</h3>
-          <p className="text-zinc-500 text-sm">전 세계 멍때리기 챔피언들</p>
+          <p className="text-zinc-500 text-sm flex items-center justify-center gap-1">
+            <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            실시간
+          </p>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => onFilterChange("world")}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              filter === "world"
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50"
+            }`}
+          >
+            🌍 월드
+          </button>
+          <button
+            onClick={() => onFilterChange("country")}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              filter === "country"
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50"
+            }`}
+          >
+            {getFlag(userCountry)} {countryNames[userCountry] || userCountry}
+          </button>
         </div>
 
         {/* Loading */}
@@ -86,19 +128,24 @@ export default function RankingModal({
               rankings.map((ranking, index) => (
                 <div
                   key={ranking.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                     index < 3
                       ? "bg-gradient-to-r from-yellow-900/20 to-transparent border border-yellow-700/30"
                       : "bg-zinc-800/30 border border-zinc-700/30"
                   }`}
                 >
                   {/* Rank */}
-                  <div className="w-10 text-center">
+                  <div className="w-8 text-center">
                     {index < 3 ? (
-                      <span className="text-2xl">{getMedal(index + 1)}</span>
+                      <span className="text-xl">{getMedal(index + 1)}</span>
                     ) : (
-                      <span className="text-zinc-500 font-mono">{index + 1}</span>
+                      <span className="text-zinc-500 font-mono text-sm">{index + 1}</span>
                     )}
+                  </div>
+
+                  {/* Country Flag */}
+                  <div className="w-6 text-center">
+                    <span className="text-lg">{getFlag(ranking.country)}</span>
                   </div>
 
                   {/* Nickname */}
