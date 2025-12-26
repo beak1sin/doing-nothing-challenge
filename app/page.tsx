@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { useGameLogic, useAntiCheat, useSurvivalCheck } from "@/hooks";
+import { useMemo, useState } from "react";
+import { useGameLogic, useAntiCheat, useSurvivalCheck, useRankings } from "@/hooks";
+import ScoreSubmitModal from "@/components/ScoreSubmitModal";
+import RankingModal from "@/components/RankingModal";
 
 // Zen quotes for atmosphere
 const ZEN_QUOTES = [
@@ -13,15 +15,8 @@ const ZEN_QUOTES = [
 ];
 
 export default function Home() {
-  const {
-    gameState,
-    formattedTime,
-    elapsedTime,
-    failReason,
-    startGame,
-    failGame,
-    resetGame,
-  } = useGameLogic();
+  const { gameState, formattedTime, elapsedTime, failReason, startGame, failGame, resetGame } =
+    useGameLogic();
 
   useAntiCheat({
     gameState,
@@ -37,11 +32,21 @@ export default function Home() {
     responseTime: 5,
   });
 
+  // Ranking hooks and states
+  const {
+    rankings,
+    loading: rankingLoading,
+    error: rankingError,
+    userRank,
+    fetchRankings,
+    submitScore,
+  } = useRankings();
+
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showRankingModal, setShowRankingModal] = useState(false);
+
   // Get random quote (memoized to avoid impure function during render)
-  const randomQuote = useMemo(
-    () => ZEN_QUOTES[Math.floor(Math.random() * ZEN_QUOTES.length)],
-    []
-  );
+  const randomQuote = useMemo(() => ZEN_QUOTES[Math.floor(Math.random() * ZEN_QUOTES.length)], []);
 
   // Save best score to localStorage
   const saveBestScore = () => {
@@ -71,6 +76,11 @@ export default function Home() {
   if (gameState === "failed" && elapsedTime > 0) {
     saveBestScore();
   }
+
+  // Handle score submission
+  const handleSubmitScore = async (nickname: string): Promise<boolean> => {
+    return await submitScore(nickname, elapsedTime);
+  };
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black p-8">
@@ -147,8 +157,7 @@ export default function Home() {
                 <li>• 키보드를 누르면 탈락</li>
                 <li>• 다른 탭으로 이동하면 탈락</li>
                 <li>
-                  • 가끔 나오는 <span className="text-blue-400">생존 신고</span>
-                  에 응답하세요
+                  • 가끔 나오는 <span className="text-blue-400">생존 신고</span>에 응답하세요
                 </li>
               </ul>
               <p className="mt-4 text-zinc-500 text-xs">
@@ -156,13 +165,18 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Start Button */}
-            <button
-              onClick={startGame}
-              className="btn-primary text-lg px-12 py-4"
-            >
-              시작하기
-            </button>
+            {/* Buttons */}
+            <div className="flex flex-col gap-3">
+              <button onClick={startGame} className="btn-primary text-lg px-12 py-4">
+                시작하기
+              </button>
+              <button
+                onClick={() => setShowRankingModal(true)}
+                className="btn-secondary px-12 py-3"
+              >
+                🏆 월드랭킹
+              </button>
+            </div>
           </div>
         )}
 
@@ -174,9 +188,7 @@ export default function Home() {
               <div className="w-64 h-64 md:w-80 md:h-80 rounded-full glass-card pulse-ring flex items-center justify-center">
                 <div className="text-center">
                   <p className="timer-display">{formattedTime}</p>
-                  <p className="text-zinc-500 text-sm mt-2">
-                    화면을 응시하세요
-                  </p>
+                  <p className="text-zinc-500 text-sm mt-2">화면을 응시하세요</p>
                 </div>
               </div>
             </div>
@@ -199,12 +211,16 @@ export default function Home() {
 
               <div className="my-6 py-4 border-y border-zinc-800">
                 <p className="text-zinc-500 text-sm">버틴 시간</p>
-                <p className="text-4xl font-light text-white">
-                  {formattedTime}
-                </p>
+                <p className="text-4xl font-light text-white">{formattedTime}</p>
               </div>
 
               <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="btn-primary w-full bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500"
+                >
+                  🏆 월드랭킹 등록
+                </button>
                 <button onClick={resetGame} className="btn-primary w-full">
                   다시 도전
                 </button>
@@ -214,9 +230,7 @@ export default function Home() {
                     if (navigator.share) {
                       navigator.share({ text, url: window.location.href });
                     } else {
-                      navigator.clipboard.writeText(
-                        text + " " + window.location.href
-                      );
+                      navigator.clipboard.writeText(text + " " + window.location.href);
                       alert("클립보드에 복사되었습니다!");
                     }
                   }}
@@ -238,15 +252,12 @@ export default function Home() {
               <p className="text-zinc-400 mb-4">
                 아직 화면을 보고 있다면
                 <br />
-                <span className="text-blue-400 font-semibold">스페이스바</span>
-                를 누르세요
+                <span className="text-blue-400 font-semibold">스페이스바</span>를 누르세요
               </p>
 
               {/* Countdown */}
               <div className="mb-4">
-                <span className="text-4xl font-bold text-red-500">
-                  {timeLeft}
-                </span>
+                <span className="text-4xl font-bold text-red-500">{timeLeft}</span>
                 <span className="text-zinc-500 ml-1">초</span>
               </div>
 
@@ -259,10 +270,7 @@ export default function Home() {
               </div>
 
               {/* Mobile tap button */}
-              <button
-                onClick={handleSurvivalResponse}
-                className="btn-primary w-full mt-6"
-              >
+              <button onClick={handleSurvivalResponse} className="btn-primary w-full mt-6">
                 여기 있어요! 👋
               </button>
             </div>
@@ -271,11 +279,33 @@ export default function Home() {
       </div>
 
       {/* Ad Placeholder */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20">
+      {/* <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20">
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg px-6 py-2 text-zinc-600 text-xs">
           광고 영역 (AdSense)
         </div>
-      </div>
+      </div> */}
+
+      {/* Score Submit Modal */}
+      <ScoreSubmitModal
+        isOpen={showSubmitModal}
+        score={elapsedTime}
+        formattedTime={formattedTime}
+        onClose={() => setShowSubmitModal(false)}
+        onSubmit={handleSubmitScore}
+        onViewRankings={() => setShowRankingModal(true)}
+        loading={rankingLoading}
+        userRank={userRank}
+      />
+
+      {/* Ranking Modal */}
+      <RankingModal
+        isOpen={showRankingModal}
+        onClose={() => setShowRankingModal(false)}
+        rankings={rankings}
+        loading={rankingLoading}
+        error={rankingError}
+        onRefresh={fetchRankings}
+      />
     </main>
   );
 }
