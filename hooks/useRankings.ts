@@ -3,6 +3,12 @@ import { supabase, Ranking } from "@/lib/supabase";
 
 type RankingFilter = "world" | "country";
 
+interface Stats {
+  totalParticipants: number;
+  averageTime: number;
+  myPercentile: number | null;
+}
+
 export function useRankings() {
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -10,13 +16,17 @@ export function useRankings() {
   const [userRank, setUserRank] = useState<number | null>(null);
   const [filter, setFilter] = useState<RankingFilter>("world");
   const [userCountry, setUserCountry] = useState<string>("KR");
+  const [stats, setStats] = useState<Stats>({
+    totalParticipants: 0,
+    averageTime: 0,
+    myPercentile: null,
+  });
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // 사용자 국가 감지
   useEffect(() => {
     const detectCountry = async () => {
       try {
-        // 브라우저 언어 기반 국가 추정 (간단한 방법)
         const lang = navigator.language || "ko-KR";
         const countryCode = lang.split("-")[1] || "KR";
         setUserCountry(countryCode.toUpperCase());
@@ -25,6 +35,40 @@ export function useRankings() {
       }
     };
     detectCountry();
+  }, []);
+
+  // 통계 조회
+  const fetchStats = useCallback(async (myScore?: number) => {
+    // 전체 참가자 수
+    const { count: totalCount } = await supabase
+      .from("rankings")
+      .select("*", { count: "exact", head: true });
+
+    // 평균 점수 계산을 위한 모든 점수 조회
+    const { data: allScores } = await supabase.from("rankings").select("score");
+
+    let averageTime = 0;
+    if (allScores && allScores.length > 0) {
+      const total = allScores.reduce((sum, r) => sum + r.score, 0);
+      averageTime = Math.round(total / allScores.length);
+    }
+
+    // 내 상위 퍼센트
+    let myPercentile: number | null = null;
+    if (myScore && totalCount && totalCount > 0) {
+      const { count: betterCount } = await supabase
+        .from("rankings")
+        .select("*", { count: "exact", head: true })
+        .gt("score", myScore);
+
+      myPercentile = Math.round(((betterCount || 0) / totalCount) * 100);
+    }
+
+    setStats({
+      totalParticipants: totalCount || 0,
+      averageTime,
+      myPercentile,
+    });
   }, []);
 
   // TOP 100 랭킹 조회
@@ -53,8 +97,11 @@ export function useRankings() {
         setRankings(data || []);
       }
       setLoading(false);
+
+      // 통계도 함께 조회
+      fetchStats();
     },
-    [filter, userCountry]
+    [filter, userCountry, fetchStats]
   );
 
   // 필터 변경 시 다시 조회
@@ -66,7 +113,6 @@ export function useRankings() {
 
   // 실시간 구독 설정
   const subscribeToRankings = useCallback(() => {
-    // 이미 구독 중이면 스킵
     if (channelRef.current) return;
 
     const channel = supabase
@@ -81,14 +127,18 @@ export function useRankings() {
         (payload) => {
           const newRanking = payload.new as Ranking;
           setRankings((prev) => {
-            // 이미 존재하는 ID면 스킵
             if (prev.some((r) => r.id === newRanking.id)) {
               return prev;
             }
-            // 새 랭킹 추가 후 정렬
             const updated = [...prev, newRanking].sort((a, b) => b.score - a.score).slice(0, 100);
             return updated;
           });
+
+          // 통계 업데이트
+          setStats((prev) => ({
+            ...prev,
+            totalParticipants: prev.totalParticipants + 1,
+          }));
         }
       )
       .subscribe();
@@ -127,17 +177,21 @@ export function useRankings() {
         return false;
       }
 
-      // 제출 후 내 순위 조회 (전체 랭킹 기준)
+      // 제출 후 내 순위 조회
       const { count } = await supabase
         .from("rankings")
         .select("*", { count: "exact", head: true })
         .gt("score", score);
 
       setUserRank((count || 0) + 1);
+
+      // 통계 업데이트 (내 점수 포함)
+      await fetchStats(score);
+
       setLoading(false);
       return true;
     },
-    [userCountry]
+    [userCountry, fetchStats]
   );
 
   // 시간 포맷 (밀리초 -> 분:초)
@@ -154,8 +208,10 @@ export function useRankings() {
     userRank,
     filter,
     userCountry,
+    stats,
     setFilter,
     fetchRankings,
+    fetchStats,
     submitScore,
     formatTime,
     subscribeToRankings,

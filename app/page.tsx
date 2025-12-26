@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useGameLogic, useAntiCheat, useSurvivalCheck, useRankings } from "@/hooks";
+import { useMemo, useState, useEffect } from "react";
+import { useGameLogic, useAntiCheat, useSurvivalCheck, useRankings, useSound } from "@/hooks";
 import ScoreSubmitModal from "@/components/ScoreSubmitModal";
 import RankingModal from "@/components/RankingModal";
+import StatsCard from "@/components/StatsCard";
+import SoundControl from "@/components/SoundControl";
 
 // Zen quotes for atmosphere
 const ZEN_QUOTES = [
@@ -40,12 +42,17 @@ export default function Home() {
     userRank,
     filter,
     userCountry,
+    stats,
     setFilter,
     fetchRankings,
     submitScore,
+    formatTime,
     subscribeToRankings,
     unsubscribeFromRankings,
   } = useRankings();
+
+  // Sound hooks
+  const { isMuted, isBgmPlaying, playSound, toggleBgm, startBgm, stopBgm, toggleMute } = useSound();
 
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showRankingModal, setShowRankingModal] = useState(false);
@@ -77,18 +84,43 @@ export default function Home() {
     return "기록 없음";
   };
 
-  // Effect to save score when game fails
-  if (gameState === "failed" && elapsedTime > 0) {
-    saveBestScore();
-  }
+  // Sound effects based on game state
+  useEffect(() => {
+    if (gameState === "playing") {
+      playSound("start");
+      startBgm();
+    } else if (gameState === "failed") {
+      playSound("fail");
+      stopBgm();
+      saveBestScore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState]);
 
   // Handle score submission
   const handleSubmitScore = async (nickname: string): Promise<boolean> => {
-    return await submitScore(nickname, elapsedTime);
+    const success = await submitScore(nickname, elapsedTime);
+    if (success) {
+      playSound("success");
+    }
+    return success;
+  };
+
+  // Handle game start with sound
+  const handleStartGame = () => {
+    startGame();
   };
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black p-8">
+      {/* Sound Control Buttons */}
+      <SoundControl
+        isMuted={isMuted}
+        isBgmPlaying={isBgmPlaying}
+        onToggleMute={toggleMute}
+        onToggleBgm={toggleBgm}
+      />
+
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-black to-black" />
 
@@ -145,7 +177,7 @@ export default function Home() {
           <h1 className="text-2xl font-light tracking-widest text-zinc-500 uppercase">
             The Art of
           </h1>
-          <h2 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent pb-1">
+          <h2 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent pb-3">
             Doing Nothing
           </h2>
           <p className="mt-3 text-zinc-500 text-sm">멍때리기 대회</p>
@@ -153,7 +185,15 @@ export default function Home() {
 
         {/* Game Area */}
         {gameState === "idle" && (
-          <div className="flex flex-col items-center gap-8 mt-8">
+          <div className="flex flex-col items-center gap-6 mt-8">
+            {/* Stats Card */}
+            <StatsCard
+              totalParticipants={stats.totalParticipants}
+              averageTime={stats.averageTime}
+              myPercentile={stats.myPercentile}
+              formatTime={formatTime}
+            />
+
             {/* Instructions Card */}
             <div className="glass-card p-8 max-w-md text-center">
               <h3 className="text-xl font-semibold text-white mb-4">🧘 규칙</h3>
@@ -172,7 +212,7 @@ export default function Home() {
 
             {/* Buttons */}
             <div className="flex flex-col gap-3">
-              <button onClick={startGame} className="btn-primary text-lg px-12 py-4">
+              <button onClick={handleStartGame} className="btn-primary text-lg px-12 py-4">
                 시작하기
               </button>
               <button
